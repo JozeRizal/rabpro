@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProRAB - Aplikasi Pembuat RAB & Invoice</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (untuk memproses JSX di browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        /* Custom Scrollbar agar lebih rapi */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Mencegah zoom di input pada mobile */
+        input, select, textarea { font-size: 16px; }
+        
+        /* Animasi loading */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- 1. SETUP GLOBAL VARIABLES ---
+        const { useState, useEffect, useReducer, useContext, createContext, useMemo, useRef } = React;
+        
+        // --- 2. ICON DEFINITIONS (MANUAL & STABLE) ---
+        // Mendefinisikan komponen Ikon secara langsung untuk menghindari error CDN Lucide
+        
+        const IconBase = ({ children, className = "", size = 24, ...props }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className} 
+                {...props}
+            >
+                {children}
+            </svg>
+        );
+
+        const Trash2 = (props) => <IconBase {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>;
+        const Plus = (props) => <IconBase {...props}><path d="M5 12h14"/><path d="M12 5v14"/></IconBase>;
+        const FileText = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></IconBase>;
+        const Settings = (props) => <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></IconBase>;
+        const Calculator = (props) => <IconBase {...props}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></IconBase>;
+        const Save = (props) => <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></IconBase>;
+        const Download = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconBase>;
+        const ChevronDown = (props) => <IconBase {...props}><path d="m6 9 6 6 6-6"/></IconBase>;
+        const ChevronUp = (props) => <IconBase {...props}><path d="m18 15-6-6-6 6"/></IconBase>;
+        const AlertCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconBase>;
+        const Percent = (props) => <IconBase {...props}><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></IconBase>;
+        const GripVertical = (props) => <IconBase {...props}><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></IconBase>;
+        const Loader2 = (props) => <IconBase {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></IconBase>;
+        const DownloadCloud = (props) => <IconBase {...props}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></IconBase>;
+        const Share2 = (props) => <IconBase {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></IconBase>;
+        const Upload = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></IconBase>;
+        const X = (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
+        const ImageIcon = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></IconBase>;
+        const ArrowUp = (props) => <IconBase {...props}><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></IconBase>;
+        const ArrowDown = (props) => <IconBase {...props}><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></IconBase>;
+        const Receipt = (props) => <IconBase {...props}><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M16 8h-6"/><path d="M16 12h-6"/><path d="M10 16h-6"/></IconBase>;
+        const FileCheck = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></IconBase>;
+        const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconBase>;
+        const Sparkles = (props) => <IconBase {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 5H5"/><path d="M21 21v-4"/><path d="M17 19h4"/></IconBase>;
+
+        // --- 3. CORE LOGIC ---
+
+        const HISTORY_KEY = 'prorab_item_history';
+
+        // Helper untuk mengambil history
+        const getItemHistory = () => {
+            try {
+                return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            } catch {
+                return [];
+            }
+        };
+
+        // Helper untuk menyimpan/memperbarui history
+        const addToHistory = (name, unit, price) => {
+            if (!name || name.trim().length < 2) return; 
+            
+            const history = getItemHistory();
+            const cleanName = name.trim();
+            
+            const newHistory = history.filter(item => item.name.toLowerCase() !== cleanName.toLowerCase());
+            
+            newHistory.unshift({ name: cleanName, unit, price });
+            
+            const limitedHistory = newHistory.slice(0, 200);
+            
+            try {
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(limitedHistory));
+            } catch (e) {
+                console.warn("History storage full");
+            }
+        };
+
+        /**
+         * ==========================================
+         * UTILITIES & TYPES
+         * ==========================================
+         */
+
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).format(amount);
+        };
+
+        const COMMON_UNITS = [
+            "ls", "m'", "m2", "m3", "kg", "ton", 
+            "bh", "unit", "set", "titik", 
+            "btg", "lbr", "zak", "roll", 
+            "jam", "hari"
+        ];
+
+        // Initial State
+        const initialData = {
+            activeTab: 'rab', 
+            profile: {
+                companyName: "Karya Mandiri Konstruksi",
+                address: "Jl. Merdeka No. 45, Jakarta Selatan",
+                phone: "0812-3456-7890",
+                email: "admin@karyamandiri.com",
+                logoUrl: "", 
+                footerText: "Garansi Pemeliharaan 3 Bulan",
+                clientName: "Bpk. Budi Santoso",
+                projectLocation: "Renovasi Rumah Cluster Harmoni",
+                proposalDate: new Date().toISOString().split('T')[0]
+            },
+            invoice: {
+                number: `INV/${new Date().getFullYear()}/001`,
+                date: new Date().toISOString().split('T')[0],
+                dueDate: "", 
+                selectedTermId: "", 
+                bankName: "BCA",
+                accountNumber: "123-456-7890",
+                accountHolder: "Karya Mandiri Konstruksi",
+                notes: "Mohon ditransfer sesuai nominal tertera.",
+                enablePenalty: false, 
+                penaltyText: "Pembayaran melewati jatuh tempo dikenakan denda 1% per hari." 
+            },
+            sections: [
+                {
+                    id: 1,
+                    name: "Pekerjaan Persiapan",
+                    items: [
+                        { id: 101, name: "Pembersihan Lahan", qty: 1, unit: "ls", price: 500000 },
+                        { id: 102, name: "Mobilisasi Alat & Tukang", qty: 1, unit: "ls", price: 1500000 }
+                    ]
+                },
+                {
+                    id: 2,
+                    name: "Pekerjaan Lantai",
+                    items: [
+                        { id: 201, name: "Pasang Keramik 60x60", qty: 45, unit: "m2", price: 185000 },
+                        { id: 202, name: "Pasang Plint Lantai", qty: 30, unit: "m'", price: 45000 }
+                    ]
+                }
+            ],
+            settings: {
+                taxRate: 11, 
+                useTax: false,
+                discountType: 'percent', 
+                discountValue: 0
+            },
+            paymentTerms: [
+                { id: 1, name: "DP (Down Payment)", percentage: 30, note: "Saat SPK ditandatangani" },
+                { id: 2, name: "Termin 1 (Progress 50%)", percentage: 40, note: "Saat struktur atap naik" },
+                { id: 3, name: "Pelunasan (Retensi)", percentage: 30, note: "Setelah serah terima kunci" }
+            ]
+        };
+
+        /**
+         * ==========================================
+         * STORE / STATE MANAGEMENT
+         * ==========================================
+         */
+
+        const AppContext = createContext();
+
+        const appReducer = (state, action) => {
+            switch (action.type) {
+                case 'SET_TAB':
+                    return { ...state, activeTab: action.payload };
+                case 'UPDATE_PROFILE':
+                    return { ...state, profile: { ...state.profile, ...action.payload } };
+                case 'UPDATE_INVOICE':
+                    return { ...state, invoice: { ...state.invoice, ...action.payload } };
+                case 'UPDATE_SETTINGS':
+                    return { ...state, settings: { ...state.settings, ...action.payload } };
+                case 'ADD_SECTION':
+                    return { ...state, sections: [...state.sections, { id: Date.now(), name: "Pekerjaan Baru", items: [] }] };
+                case 'DELETE_SECTION':
+                    return { ...state, sections: state.sections.filter(s => s.id !== action.payload) };
+                case 'UPDATE_SECTION_NAME':
+                    return { ...state, sections: state.sections.map(s => s.id === action.payload.id ? { ...s, name: action.payload.name } : s) };
+                case 'MOVE_SECTION': {
+                    const { index, direction } = action.payload;
+                    if (index < 0 || index >= state.sections.length) return state;
+                    const newIndex = index + direction;
+                    if (newIndex < 0 || newIndex >= state.sections.length) return state;
+                    const newSections = [...state.sections];
+                    [newSections[index], newSections[newIndex]] = [newSections[newIndex], newSections[index]];
+                    return { ...state, sections: newSections };
+                }
+                case 'ADD_ITEM':
+                    return { ...state, sections: state.sections.map(s => s.id === action.payload.sectionId ? { ...s, items: [...s.items, { id: Date.now(), name: "", qty: 1, unit: "ls", price: 0 }] } : s) };
+                case 'DELETE_ITEM':
+                    return { ...state, sections: state.sections.map(s => s.id === action.payload.sectionId ? { ...s, items: s.items.filter(i => i.id !== action.payload.itemId) } : s) };
+                case 'UPDATE_ITEM':
+                    return { ...state, sections: state.sections.map(s => s.id === action.payload.sectionId ? { ...s, items: s.items.map(i => i.id === action.payload.itemId ? { ...i, ...action.payload.data } : i) } : s) };
+                case 'UPDATE_ITEM_MULTIPLE':
+                    return { ...state, sections: state.sections.map(s => s.id === action.payload.sectionId ? { ...s, items: s.items.map(i => i.id === action.payload.itemId ? { ...i, ...action.payload.data } : i) } : s) };
+                case 'UPDATE_TERM':
+                    return { ...state, paymentTerms: state.paymentTerms.map(t => t.id === action.payload.id ? { ...t, ...action.payload.data } : t) };
+                case 'ADD_TERM':
+                    return { ...state, paymentTerms: [...state.paymentTerms, { id: Date.now(), name: "Termin Baru", percentage: 0, note: "" }] };
+                case 'DELETE_TERM':
+                    return { ...state, paymentTerms: state.paymentTerms.filter(t => t.id !== action.payload) };
+                case 'LOAD_DATA':
+                    return { ...initialData, ...action.payload, invoice: { ...initialData.invoice, ...(action.payload.invoice || {}) }, profile: { ...initialData.profile, ...(action.payload.profile || {}) } };
+                default:
+                    return state;
+            }
+        };
+
+        const useProposalLogic = (state) => {
+            const subTotal = useMemo(() => state.sections.reduce((acc, section) => acc + section.items.reduce((sum, item) => sum + (item.qty * item.price), 0), 0), [state.sections]);
+            const discountAmount = useMemo(() => state.settings.discountType === 'percent' ? subTotal * (state.settings.discountValue / 100) : state.settings.discountValue, [subTotal, state.settings]);
+            const afterDiscount = subTotal - discountAmount;
+            const taxAmount = useMemo(() => state.settings.useTax ? afterDiscount * (state.settings.taxRate / 100) : 0, [afterDiscount, state.settings]);
+            const grandTotal = afterDiscount + taxAmount;
+            const totalTermPercent = useMemo(() => state.paymentTerms.reduce((sum, term) => sum + parseFloat(term.percentage || 0), 0), [state.paymentTerms]);
+            return { subTotal, discountAmount, afterDiscount, taxAmount, grandTotal, totalTermPercent };
+        };
+
+        const usePWAInstall = () => {
+            const [deferredPrompt, setDeferredPrompt] = useState(null);
+            const [isInstallable, setIsInstallable] = useState(false);
+            useEffect(() => {
+                const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); setIsInstallable(true); };
+                window.addEventListener('beforeinstallprompt', handler);
+                return () => window.removeEventListener('beforeinstallprompt', handler);
+            }, []);
+            const installApp = async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                setDeferredPrompt(null);
+                setIsInstallable(false);
+            };
+            return { isInstallable, installApp };
+        };
+
+        // --- PDF GENERATION LOGIC ---
+        const generateRABPDF = (state, calculations) => {
+            if (typeof window.jspdf === 'undefined') { alert("Library PDF belum termuat."); return; }
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const pageWidth = doc.internal.pageSize.width;
+                let textX = 15;
+                if (state.profile.logoUrl) {
+                    textX = 40;
+                    try { doc.addImage(state.profile.logoUrl, 'PNG', 15, 15, 20, 20); } catch (e) {}
+                }
+                doc.setFontSize(18); doc.setFont("helvetica", "bold"); doc.text(state.profile.companyName.toUpperCase(), textX, 20);
+                doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text(state.profile.address, textX, 26);
+                doc.text(`Telp/WA: ${state.profile.phone}`, textX, 31);
+                doc.line(15, 38, pageWidth - 15, 38);
+                doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.text("PENAWARAN HARGA (RAB)", pageWidth / 2, 50, { align: "center" });
+                doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                doc.text(`Kepada Yth: ${state.profile.clientName}`, 15, 62);
+                doc.text(`Proyek: ${state.profile.projectLocation}`, 15, 67);
+                doc.text(`Tanggal: ${state.profile.proposalDate}`, pageWidth - 15, 62, { align: "right" });
+
+                let finalY = 78;
+                state.sections.forEach((section) => {
+                    doc.setFont("helvetica", "bold"); doc.setFillColor(240, 240, 240);
+                    doc.rect(14, finalY, pageWidth - 28, 8, "F");
+                    doc.text(section.name.toUpperCase(), 16, finalY + 5.5);
+                    finalY += 8;
+                    const tableBody = section.items.map(item => [item.name, `${item.qty} ${item.unit}`, formatCurrency(item.price), formatCurrency(item.qty * item.price)]);
+                    doc.autoTable({ 
+                        startY: finalY, 
+                        head: [['Uraian Pekerjaan', 'Volume', 'Harga Satuan', 'Total']], // Updated Header Names
+                        body: tableBody, 
+                        theme: 'plain', 
+                        styles: { fontSize: 9, cellPadding: 1.5 }, 
+                        headStyles: { 
+                            fillColor: [255, 255, 255], 
+                            textColor: [0,0,0], 
+                            fontStyle: 'bold', 
+                            lineWidth: {bottom: 0.1}
+                            // Removed global halign to allow columnStyles to control header alignment
+                        }, 
+                        columnStyles: { 
+                            0: { cellWidth: 'auto', halign: 'left' }, 
+                            1: { cellWidth: 25, halign: 'center' }, // Vol: Center
+                            2: { cellWidth: 40, halign: 'right' }, // Price: Right (Widened to 40)
+                            3: { cellWidth: 40, halign: 'right' }  // Total: Right (Widened to 40)
+                        }, 
+                        margin: { left: 15, right: 15 } 
+                    });
+                    finalY = doc.lastAutoTable.finalY + 5;
+                });
+
+                if (finalY > 230) { doc.addPage(); finalY = 20; }
+                const summaryX = pageWidth - 100; // Adjusted X to prevent overlap
+                const valueX = pageWidth - 15;
+                doc.setFontSize(10); doc.text("Subtotal:", summaryX, finalY); doc.text(formatCurrency(calculations.subTotal), valueX, finalY, { align: "right" }); finalY += 6;
+                if (calculations.discountAmount > 0) { doc.text(`Diskon:`, summaryX, finalY); doc.text(`- ${formatCurrency(calculations.discountAmount)}`, valueX, finalY, { align: "right" }); finalY += 6; }
+                if (state.settings.useTax) { doc.text(`PPN (${state.settings.taxRate}%):`, summaryX, finalY); doc.text(formatCurrency(calculations.taxAmount), valueX, finalY, { align: "right" }); finalY += 6; }
+                doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.line(summaryX, finalY - 3, pageWidth - 15, finalY - 3); doc.text("GRAND TOTAL:", summaryX, finalY + 2); doc.text(formatCurrency(calculations.grandTotal), valueX, finalY + 2, { align: "right" }); finalY += 15;
+
+                doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text("Termin Pembayaran:", 15, finalY); finalY += 5; doc.setFont("helvetica", "normal");
+                state.paymentTerms.forEach(term => { const nominal = calculations.grandTotal * (term.percentage / 100); doc.text(`• ${term.name} (${term.percentage}%): ${formatCurrency(nominal)}`, 20, finalY); finalY += 6; });
+                
+                finalY += 15; if (finalY > 250) { doc.addPage(); finalY = 30; }
+                doc.text("Disetujui Oleh (Klien),", 40, finalY, { align: "center" }); doc.text("Hormat Kami,", pageWidth - 40, finalY, { align: "center" });
+                doc.text("_______________________", 40, finalY + 25, { align: "center" }); doc.text("_______________________", pageWidth - 40, finalY + 25, { align: "center" });
+                doc.text(state.profile.clientName, 40, finalY + 30, { align: "center" }); doc.text(state.profile.companyName, pageWidth - 40, finalY + 30, { align: "center" });
+                doc.save(`RAB_${state.profile.clientName.replace(/\s+/g, '_')}.pdf`);
+            } catch (err) { alert("Error PDF: " + err.message); }
+        };
+
+        const generateInvoicePDF = (state, calculations) => {
+            if (typeof window.jspdf === 'undefined') { alert("Library PDF belum siap."); return; }
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const pageWidth = doc.internal.pageSize.width;
+                const selectedTerm = state.paymentTerms.find(t => String(t.id) === String(state.invoice.selectedTermId));
+                if (!selectedTerm) { alert("Pilih termin dulu!"); return; }
+                const invoiceAmount = calculations.grandTotal * (selectedTerm.percentage / 100);
+                
+                let textX = 15;
+                if (state.profile.logoUrl) { textX = 40; try { doc.addImage(state.profile.logoUrl, 'PNG', 15, 15, 20, 20); } catch (e) {} }
+                doc.setFontSize(18); doc.setFont("helvetica", "bold"); doc.text(state.profile.companyName.toUpperCase(), textX, 20);
+                doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text(state.profile.address, textX, 26); doc.line(15, 38, pageWidth - 15, 38);
+
+                doc.setFontSize(24); doc.setFont("helvetica", "bold"); doc.setTextColor(40, 40, 40); doc.text("INVOICE", pageWidth - 15, 55, { align: "right" });
+                doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
+                doc.text("TAGIHAN KEPADA:", 15, 55); doc.setFont("helvetica", "bold"); doc.text(state.profile.clientName, 15, 60);
+                doc.setFont("helvetica", "normal"); doc.text(state.profile.projectLocation, 15, 65);
+                
+                let headerY = 65;
+                doc.text(`Nomor Invoice:`, pageWidth - 60, headerY); doc.text(state.invoice.number || '-', pageWidth - 15, headerY, { align: "right" });
+                headerY += 5; doc.text(`Tanggal:`, pageWidth - 60, headerY); doc.text(state.invoice.date || '-', pageWidth - 15, headerY, { align: "right" });
+                if (state.invoice.dueDate) { headerY += 5; doc.text(`Jatuh Tempo:`, pageWidth - 60, headerY); doc.text(state.invoice.dueDate, pageWidth - 15, headerY, { align: "right" }); }
+
+                const finalY = headerY + 15;
+                doc.autoTable({ startY: finalY, head: [['Deskripsi', 'Persentase', 'Total']], body: [[`${selectedTerm.name}\n${selectedTerm.note || ''}`, `${selectedTerm.percentage}%`, formatCurrency(invoiceAmount)]], theme: 'plain', styles: { fontSize: 10, cellPadding: 3 }, headStyles: { fillColor: [50, 50, 50], textColor: [255,255,255], fontStyle: 'bold' }, columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30, halign: 'center' }, 2: { cellWidth: 50, halign: 'right', fontStyle: 'bold' } }, margin: { left: 15, right: 15 } });
+
+                let yPos = doc.lastAutoTable.finalY + 10;
+                // Fix: Shift label further left to avoid overlap (pageWidth - 110 instead of -90)
+                doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.text("TOTAL TAGIHAN", pageWidth - 110, yPos); doc.text(formatCurrency(invoiceAmount), pageWidth - 15, yPos, { align: "right" });
+                
+                yPos += 20; const boxHeight = state.invoice.enablePenalty ? 50 : 40;
+                doc.setFillColor(245, 245, 245); doc.roundedRect(15, yPos, pageWidth - 30, boxHeight, 3, 3, "F");
+                doc.setFontSize(10); doc.setTextColor(0); doc.text("Instruksi Pembayaran:", 20, yPos + 8);
+                doc.setFont("helvetica", "normal"); doc.text(`Bank: ${state.invoice.bankName || '-'}`, 20, yPos + 16); doc.text(`No. Rekening: ${state.invoice.accountNumber || '-'}`, 20, yPos + 22); doc.text(`Atas Nama: ${state.invoice.accountHolder || '-'}`, 20, yPos + 28);
+                doc.setFontSize(8); doc.setTextColor(100); doc.text(`Catatan: ${state.invoice.notes || '-'}`, 20, yPos + 36);
+                if (state.invoice.enablePenalty) { doc.setTextColor(220, 53, 69); doc.setFont("helvetica", "bold"); doc.text(`PERHATIAN: ${state.invoice.penaltyText}`, 20, yPos + 44); }
+
+                const sigY = yPos + boxHeight + 20; doc.setTextColor(0); doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                doc.text("Hormat Kami,", pageWidth - 40, sigY, { align: "center" }); doc.text(state.profile.companyName, pageWidth - 40, sigY + 25, { align: "center" });
+                doc.save(`Invoice_${(state.invoice.number || 'Draft').replace(/\//g, '-')}.pdf`);
+            } catch (err) { alert("Error PDF Invoice: " + err.message); }
+        };
+
+        // --- COMPONENTS ---
+
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-xl border border-gray-200 shadow-sm ${className}`}>
+                {children}
+            </div>
+        );
+
+        const Button = ({ children, onClick, variant = "primary", className = "", size = "md", disabled = false }) => {
+            const baseStyle = "inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1";
+            const variants = {
+                primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+                secondary: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-200",
+                danger: "bg-red-50 text-red-600 hover:bg-red-100 focus:ring-red-200",
+                ghost: "bg-transparent text-gray-600 hover:bg-gray-100",
+                outline: "border border-blue-600 text-blue-600 bg-white hover:bg-blue-50 focus:ring-blue-200"
+            };
+            const sizes = { sm: "px-2 py-1 text-xs", md: "px-4 py-2 text-sm", lg: "px-6 py-3 text-base" };
+            return <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${sizes[size]} ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>{children}</button>;
+        };
+
+        const Input = ({ label, value, onChange, type = "text", placeholder = "", className = "" }) => (
+            <div className={`flex flex-col gap-1.5 ${className}`}>
+                {label && <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</label>}
+                <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            </div>
+        );
+
+        const SmartDescriptionInput = ({ value, onChange, onSelect, onBlur }) => {
+            const [suggestions, setSuggestions] = useState([]);
+            const [showSuggestions, setShowSuggestions] = useState(false);
+            const wrapperRef = useRef(null);
+
+            useEffect(() => {
+                if (showSuggestions) {
+                    const history = getItemHistory();
+                    if (!value) {
+                        setSuggestions(history.slice(0, 5));
+                    } else {
+                        const filtered = history.filter(item => 
+                            item.name.toLowerCase().includes(value.toLowerCase())
+                        ).slice(0, 5); 
+                        setSuggestions(filtered);
+                    }
+                }
+            }, [value, showSuggestions]);
+
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                        setShowSuggestions(false);
+                    }
+                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
+            }, [wrapperRef]);
+
+            return (
+                <div className="relative w-full" ref={wrapperRef}>
+                    <div className="relative">
+                        <input 
+                            className="w-full text-sm font-medium bg-transparent border-none focus:ring-0 placeholder-gray-400 pl-7"
+                            placeholder="Deskripsi Pekerjaan..."
+                            value={value}
+                            onChange={(e) => onChange(e.target.value)}
+                            onFocus={() => setShowSuggestions(true)}
+                            onBlur={(e) => { 
+                                setTimeout(() => setShowSuggestions(false), 200);
+                                if (onBlur) onBlur(); 
+                            }}
+                        />
+                        <Search size={14} className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+
+                    {showSuggestions && suggestions.length > 0 && (
+                        <div className="absolute top-full left-0 z-50 w-full min-w-[250px] bg-white rounded-lg shadow-xl border border-gray-200 mt-1 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="bg-blue-50/50 px-3 py-1.5 border-b border-gray-100 flex items-center gap-2">
+                                <Sparkles size={10} className="text-blue-500" />
+                                <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-wider">Saran Otomatis (Riwayat)</span>
+                            </div>
+                            <ul>
+                                {suggestions.map((item, idx) => (
+                                    <li 
+                                        key={idx}
+                                        className="px-3 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 flex justify-between items-center group"
+                                        onMouseDown={() => {
+                                            onSelect(item);
+                                            setShowSuggestions(false);
+                                        }}
+                                    >
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-gray-800 group-hover:text-blue-600 transition-colors">{item.name}</span>
+                                        </div>
+                                        <div className="text-right flex flex-col items-end">
+                                            <span className="text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">{formatCurrency(item.price)}</span>
+                                            <span className="text-[10px] text-gray-400 mt-0.5">per {item.unit}</span>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const BusinessProfile = () => {
+            const { state, dispatch } = useContext(AppContext);
+            const p = state.profile;
+            const update = (field, val) => dispatch({ type: 'UPDATE_PROFILE', payload: { [field]: val } });
+            
+            const [isCompressing, setIsCompressing] = useState(false);
+
+            const compressImage = (file) => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.src = event.target.result;
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            
+                            // Resize logic: Max 800px (aggressively safe for PDF logo)
+                            const MAX_WIDTH = 800;
+                            const MAX_HEIGHT = 800;
+
+                            if (width > height) {
+                                if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                }
+                            } else {
+                                if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                }
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            // Determine output type based on input or default to jpeg for massive compression if needed.
+                            let outputMime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                            let quality = 0.7;
+
+                            resolve(canvas.toDataURL(outputMime, quality));
+                        };
+                    };
+                });
+            };
+            
+            const handleLogoUpload = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    setIsCompressing(true);
+                    try {
+                        let finalDataUrl = "";
+                        
+                        if (file.size > 1024 * 1024) { 
+                            // Jika lebih dari 1MB, lakukan kompresi otomatis
+                            finalDataUrl = await compressImage(file);
+                        } else {
+                            // Jika kecil, baca normal
+                            finalDataUrl = await new Promise((resolve) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result);
+                                reader.readAsDataURL(file);
+                            });
+                        }
+                        
+                        update('logoUrl', finalDataUrl);
+                    } catch (error) {
+                        alert("Gagal memproses gambar: " + error.message);
+                    } finally {
+                        setIsCompressing(false);
+                    }
+                }
+                e.target.value = null; 
+            };
+
+            return (
+                <Card className="p-3 md:p-6 mb-4 md:mb-6">
+                    <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><FileText className="w-5 h-5 text-blue-600" /> Info Proyek & Kontraktor</h2>
+                    <div className="mb-6 flex items-start gap-4 p-4 border rounded-lg bg-gray-50">
+                        <div className="flex-shrink-0">
+                            {p.logoUrl ? (
+                                <div className="relative w-20 h-20 border rounded-lg overflow-hidden bg-white flex items-center justify-center">
+                                    <img src={p.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                    <button onClick={() => update('logoUrl', '')} className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl-lg hover:bg-red-600"><X size={12} /></button>
+                                </div>
+                            ) : (
+                                <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400">
+                                    {isCompressing ? <Loader2 size={24} className="animate-spin text-blue-500"/> : <ImageIcon size={24} />}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Logo Usaha</label>
+                            {isCompressing ? (
+                                <div className="text-xs text-blue-600 font-medium animate-pulse">Sedang mengompres ukuran gambar...</div>
+                            ) : (
+                                <div className="relative">
+                                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                    <Button variant="secondary" size="sm" className="pointer-events-none"><Upload size={14} className="mr-2" /> Pilih Logo</Button>
+                                </div>
+                            )}
+                            <p className="text-[10px] text-gray-400 mt-1">Otomatis diperkecil jika > 1MB</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input label="Nama Perusahaaan / Tukang" value={p.companyName} onChange={e => update('companyName', e.target.value)} />
+                        <Input label="Nama Klien" value={p.clientName} onChange={e => update('clientName', e.target.value)} />
+                        <Input label="Lokasi Proyek" value={p.projectLocation} onChange={e => update('projectLocation', e.target.value)} />
+                        <Input label="Tanggal Proposal" type="date" value={p.proposalDate} onChange={e => update('proposalDate', e.target.value)} />
+                        <Input label="Alamat Usaha" value={p.address} onChange={e => update('address', e.target.value)} />
+                        <div className="flex gap-2">
+                            <Input className="flex-1" label="No HP / WA" value={p.phone} onChange={e => update('phone', e.target.value)} />
+                            <Input className="flex-1" label="Email" value={p.email} onChange={e => update('email', e.target.value)} />
+                        </div>
+                        <Input label="Footer Text (Slogan)" value={p.footerText} onChange={e => update('footerText', e.target.value)} />
+                    </div>
+                </Card>
+            );
+        };
+
+        const SectionItem = ({ sectionId, item }) => {
+            const { dispatch } = useContext(AppContext);
+            const [showUnits, setShowUnits] = useState(false);
+            
+            const updateItem = (field, val) => {
+                dispatch({ type: 'UPDATE_ITEM', payload: { sectionId, itemId: item.id, data: { [field]: val } } });
+            };
+
+            const handleSmartSelect = (suggestion) => {
+                dispatch({ 
+                    type: 'UPDATE_ITEM_MULTIPLE', 
+                    payload: { 
+                        sectionId, 
+                        itemId: item.id, 
+                        data: { name: suggestion.name, unit: suggestion.unit, price: suggestion.price } 
+                    } 
+                });
+            };
+
+            const handleSaveToHistory = () => {
+                if (item.name && item.name.trim().length > 1 && (item.price > 0 || (item.unit && item.unit.trim().length > 0))) {
+                    addToHistory(item.name, item.unit || 'ls', item.price || 0);
+                }
+            };
+
+            return (
+                <div className="grid grid-cols-12 gap-2 items-center py-2 border-b border-gray-100 last:border-0 relative hover:bg-gray-50/50 transition-colors focus-within:z-20">
+                    <div className="col-span-12 md:col-span-5 relative">
+                        <SmartDescriptionInput 
+                            value={item.name}
+                            onChange={(val) => updateItem('name', val)}
+                            onSelect={handleSmartSelect}
+                            onBlur={handleSaveToHistory} 
+                        />
+                    </div>
+                    
+                    <div className="col-span-4 md:col-span-2 relative">
+                        <div className="flex items-center border rounded bg-gray-50 w-full relative">
+                            <input type="number" className="w-1/2 p-1 text-center bg-transparent text-sm outline-none min-w-0" value={item.qty} onChange={(e) => updateItem('qty', parseFloat(e.target.value) || 0)} />
+                            <span className="text-xs text-gray-300 px-0.5">|</span>
+                            <div className="relative w-1/2">
+                                <input 
+                                    className="w-full p-1 text-center bg-transparent text-sm outline-none min-w-0 cursor-pointer" 
+                                    value={item.unit} 
+                                    onChange={(e) => updateItem('unit', e.target.value)} 
+                                    onFocus={() => setShowUnits(true)} 
+                                    onBlur={(e) => { 
+                                        setTimeout(() => setShowUnits(false), 200); 
+                                        handleSaveToHistory(); 
+                                    }} 
+                                    placeholder="Stn" 
+                                />
+                                {showUnits && (
+                                    <div className="absolute top-full left-0 mt-1 min-w-[100px] w-full bg-white border border-gray-200 rounded shadow-xl z-[100] max-h-48 overflow-y-auto">
+                                        {COMMON_UNITS.map(u => (
+                                            <div key={u} className="px-3 py-2 text-xs hover:bg-blue-50 cursor-pointer text-left text-gray-700 border-b border-gray-50" onMouseDown={(e) => { e.preventDefault(); updateItem('unit', u); setShowUnits(false); }}>{u}</div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="col-span-4 md:col-span-3">
+                        <input 
+                            type="number" 
+                            className="w-full p-1.5 text-right text-sm border rounded" 
+                            value={item.price} 
+                            onChange={(e) => updateItem('price', parseFloat(e.target.value) || 0)} 
+                            onBlur={handleSaveToHistory} 
+                        />
+                    </div>
+                    <div className="col-span-4 md:col-span-1 text-right text-xs font-bold text-gray-600 hidden md:block">
+                        {formatCurrency(item.qty * item.price)}
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                        <button onClick={() => dispatch({ type: 'DELETE_ITEM', payload: { sectionId, itemId: item.id } })} className="text-red-400 hover:text-red-600"><Trash2 size={16} /></button>
+                    </div>
+                </div>
+            );
+        }
+
+        const RabSection = ({ section, index, totalSections }) => {
+            const { dispatch } = useContext(AppContext);
+            const [isExpanded, setIsExpanded] = useState(true);
+            const sectionTotal = section.items.reduce((sum, i) => sum + (i.qty * i.price), 0);
+
+            return (
+                <Card className="mb-4 border-l-4 border-l-blue-500 transition-all duration-300">
+                    <div className="bg-gray-50 p-3 flex items-center justify-between border-b border-gray-100 rounded-t-xl">
+                        <div className="flex items-center gap-2 flex-1">
+                            <button onClick={() => setIsExpanded(!isExpanded)} className="text-gray-500">{isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</button>
+                            <input className="bg-transparent font-bold text-gray-800 text-sm md:text-base focus:outline-none w-full" value={section.name} onChange={(e) => dispatch({ type: 'UPDATE_SECTION_NAME', payload: { id: section.id, name: e.target.value } })} />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="flex flex-col gap-0.5 mr-2">
+                                <button disabled={index === 0} onClick={() => dispatch({ type: 'MOVE_SECTION', payload: { index, direction: -1 } })} className="text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowUp size={14} /></button>
+                                <button disabled={index === totalSections - 1} onClick={() => dispatch({ type: 'MOVE_SECTION', payload: { index, direction: 1 } })} className="text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowDown size={14} /></button>
+                            </div>
+                            <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">{formatCurrency(sectionTotal)}</span>
+                            <button onClick={() => dispatch({ type: 'DELETE_SECTION', payload: section.id })} className="text-gray-400 hover:text-red-500 transition-colors ml-1"><Trash2 size={16} /></button>
+                        </div>
+                    </div>
+                    {isExpanded && (
+                        <div className="p-3">
+                            <div className="hidden md:grid grid-cols-12 gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
+                                <div className="col-span-5">Uraian</div>
+                                <div className="col-span-2 text-center">Vol</div>
+                                <div className="col-span-3 text-right">Harga Satuan</div>
+                                <div className="col-span-1 text-right">Total</div>
+                                <div className="col-span-1"></div>
+                            </div>
+                            <div className="space-y-1 relative">
+                                {section.items.map(item => <SectionItem key={item.id} sectionId={section.id} item={item} />)}
+                            </div>
+                            <Button variant="ghost" size="sm" className="mt-4 text-blue-600 w-full md:w-auto" onClick={() => dispatch({ type: 'ADD_ITEM', payload: { sectionId: section.id } })}><Plus size={16} className="mr-1" /> Tambah Item Baris</Button>
+                        </div>
+                    )}
+                </Card>
+            );
+        };
+        
+        const SummaryBar = ({ calculations }) => {
+            const { state, dispatch } = useContext(AppContext);
+            const s = state.settings;
+
+            return (
+                <Card className="p-3 md:p-6 mb-4 md:mb-6 bg-slate-50 border-slate-200">
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center text-sm"><span className="text-gray-500">Subtotal</span><span className="font-semibold">{formatCurrency(calculations.subTotal)}</span></div>
+                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-2 py-2 border-t border-dashed border-gray-300">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-600">Diskon</span>
+                                <select className="text-xs border rounded p-1" value={s.discountType} onChange={(e) => dispatch({ type: 'UPDATE_SETTINGS', payload: { discountType: e.target.value } })}>
+                                    <option value="percent">% Persen</option>
+                                    <option value="fixed">Rp Nominal</option>
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input type="number" className="w-24 text-right text-sm border rounded p-1" value={s.discountValue} onChange={(e) => dispatch({ type: 'UPDATE_SETTINGS', payload: { discountValue: parseFloat(e.target.value) || 0 } })} />
+                                <span className="text-sm font-medium text-red-500 w-28 text-right">- {formatCurrency(calculations.discountAmount)}</span>
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-t border-dashed border-gray-300">
+                            <div className="flex items-center gap-2">
+                                <input type="checkbox" id="tax" checked={s.useTax} onChange={(e) => dispatch({ type: 'UPDATE_SETTINGS', payload: { useTax: e.target.checked } })} className="rounded text-blue-600 focus:ring-blue-500" />
+                                <label htmlFor="tax" className="text-sm text-gray-600">Pajak PPN ({s.taxRate}%)</label>
+                            </div>
+                            <span className="text-sm font-medium text-gray-700">+ {formatCurrency(calculations.taxAmount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-3 border-t-2 border-gray-800">
+                            <span className="text-lg font-bold text-gray-900">GRAND TOTAL</span>
+                            <span className="text-xl font-bold text-blue-700">{formatCurrency(calculations.grandTotal)}</span>
+                        </div>
+                    </div>
+                </Card>
+            );
+        };
+
+        const PaymentTerms = ({ calculations }) => {
+            const { state, dispatch } = useContext(AppContext);
+            const terms = state.paymentTerms;
+            const { totalTermPercent } = calculations;
+            const isInvalid = totalTermPercent !== 100;
+
+            return (
+                <Card className="p-3 md:p-6 mb-4 md:mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Calculator className="w-5 h-5 text-blue-600" /> Termin Pembayaran</h2>
+                        <div className={`text-sm font-bold px-3 py-1 rounded-full ${isInvalid ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>Total: {totalTermPercent}%</div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {terms.map(term => (
+                            <div key={term.id} className="grid grid-cols-12 gap-3 items-start border p-3 rounded-lg bg-gray-50">
+                                <div className="col-span-12 md:col-span-5">
+                                    <label className="text-xs text-gray-500">Nama Termin</label>
+                                    <input className="w-full text-sm font-medium border-b border-gray-300 bg-transparent focus:outline-none" value={term.name} onChange={(e) => dispatch({ type: 'UPDATE_TERM', payload: { id: term.id, data: { name: e.target.value } } })} />
+                                    <input className="w-full text-xs text-gray-500 mt-1 bg-transparent focus:outline-none" placeholder="Catatan" value={term.note} onChange={(e) => dispatch({ type: 'UPDATE_TERM', payload: { id: term.id, data: { note: e.target.value } } })} />
+                                </div>
+                                <div className="col-span-4 md:col-span-2">
+                                    <label className="text-xs text-gray-500">Persen (%)</label>
+                                    <input type="number" className="w-full text-sm font-bold border rounded p-1 text-center" value={term.percentage} onChange={(e) => dispatch({ type: 'UPDATE_TERM', payload: { id: term.id, data: { percentage: parseFloat(e.target.value) || 0 } } })} />
+                                </div>
+                                <div className="col-span-6 md:col-span-4">
+                                    <label className="text-xs text-gray-500">Nominal</label>
+                                    <div className="text-sm font-bold text-gray-700 pt-1">{formatCurrency(calculations.grandTotal * (term.percentage / 100))}</div>
+                                </div>
+                                <div className="col-span-2 md:col-span-1 flex justify-end">
+                                    <button onClick={() => dispatch({ type: 'DELETE_TERM', payload: term.id })} className="text-red-400"><Trash2 size={16} /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <div className="mt-4 flex gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => dispatch({ type: 'ADD_TERM' })}><Plus size={16} className="mr-1" /> Tambah Termin</Button>
+                        {isInvalid && <div className="flex items-center text-xs text-red-500 font-medium"><AlertCircle size={14} className="mr-1" /> Total persentase harus 100%</div>}
+                    </div>
+                </Card>
+            );
+        };
+
+        const InvoiceGenerator = ({ calculations }) => {
+            const { state, dispatch } = useContext(AppContext);
+            const inv = state.invoice;
+            const updateInv = (field, val) => dispatch({ type: 'UPDATE_INVOICE', payload: { [field]: val } });
+
+            const selectedTerm = state.paymentTerms.find(t => String(t.id) === String(inv.selectedTermId));
+            const invoiceAmount = selectedTerm ? calculations.grandTotal * (selectedTerm.percentage / 100) : 0;
+
+            return (
+                <div className="space-y-6">
+                    <Card className="p-3 md:p-6 bg-blue-50 border-blue-200">
+                        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <Receipt className="w-5 h-5 text-blue-600" />
+                            Detail Tagihan
+                        </h2>
+                        
+                        <div className="mb-4">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Pilih Termin untuk Ditagih</label>
+                            <select 
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+                                value={inv.selectedTermId}
+                                onChange={(e) => updateInv('selectedTermId', e.target.value)}
+                            >
+                                <option value="">-- Pilih Termin --</option>
+                                {state.paymentTerms.map(term => (
+                                    <option key={term.id} value={term.id}>{term.name} ({term.percentage}%)</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {selectedTerm ? (
+                            <div className="bg-white p-4 rounded-lg border border-blue-100 flex justify-between items-center mb-4 shadow-sm">
+                                <div>
+                                    <p className="text-xs text-gray-500">Nominal Tagihan</p>
+                                    <p className="text-xl font-bold text-blue-700">{formatCurrency(invoiceAmount)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs text-gray-500">Persentase</p>
+                                    <p className="font-bold text-gray-800">{selectedTerm.percentage}%</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-white p-4 rounded-lg border border-dashed border-gray-300 text-center text-sm text-gray-500 mb-4">
+                                Belum ada termin dipilih. Pilih salah satu di atas.
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input label="Nomor Invoice" value={inv.number} onChange={(e) => updateInv('number', e.target.value)} />
+                            <Input label="Tanggal Invoice" type="date" value={inv.date} onChange={(e) => updateInv('date', e.target.value)} />
+                            <Input label="Jatuh Tempo (Expired)" type="date" value={inv.dueDate} onChange={(e) => updateInv('dueDate', e.target.value)} />
+                        </div>
+                    </Card>
+
+                    <Card className="p-3 md:p-6">
+                        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <FileCheck className="w-5 h-5 text-green-600" />
+                            Instruksi Pembayaran (Rekening)
+                        </h2>
+                        <div className="grid grid-cols-1 gap-4">
+                            <Input label="Nama Bank" value={inv.bankName} onChange={(e) => updateInv('bankName', e.target.value)} placeholder="Contoh: BCA" />
+                            <Input label="Nomor Rekening" value={inv.accountNumber} onChange={(e) => updateInv('accountNumber', e.target.value)} />
+                            <Input label="Atas Nama (Pemilik Rekening)" value={inv.accountHolder} onChange={(e) => updateInv('accountHolder', e.target.value)} />
+                            <Input label="Catatan Tambahan" value={inv.notes} onChange={(e) => updateInv('notes', e.target.value)} />
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <input 
+                                    type="checkbox" 
+                                    id="penaltyToggle"
+                                    checked={inv.enablePenalty}
+                                    onChange={(e) => updateInv('enablePenalty', e.target.checked)}
+                                    className="rounded text-red-600 focus:ring-red-500"
+                                />
+                                <label htmlFor="penaltyToggle" className="text-sm font-semibold text-gray-700">Aktifkan Denda Keterlambatan</label>
+                            </div>
+                            
+                            {inv.enablePenalty && (
+                                <div className="bg-red-50 p-3 rounded-lg border border-red-200 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <label className="text-xs font-semibold text-red-600 mb-1 block">Teks Peringatan Denda</label>
+                                    <input 
+                                        className="w-full text-sm text-red-700 bg-white border border-red-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-red-500"
+                                        value={inv.penaltyText}
+                                        onChange={(e) => updateInv('penaltyText', e.target.value)}
+                                    />
+                                    <div className="flex items-center mt-1 text-xs text-red-500">
+                                        <AlertCircle size={12} className="mr-1" />
+                                        Akan muncul tulisan merah kecil di bagian bawah invoice.
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+                </div>
+            );
+        };
+
+        const AppContent = () => {
+            const { state, dispatch } = useContext(AppContext);
+            const calculations = useProposalLogic(state);
+            const [isPdfReady, setIsPdfReady] = useState(false);
+            const { isInstallable, installApp } = usePWAInstall();
+
+            useEffect(() => {
+                const loadScript = (src) => {
+                    return new Promise((resolve, reject) => {
+                        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+                        const script = document.createElement('script');
+                        script.src = src; script.async = true;
+                        script.onload = resolve; script.onerror = reject;
+                        document.body.appendChild(script);
+                    });
+                };
+                loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")
+                    .then(() => loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"))
+                    .then(() => setIsPdfReady(true))
+                    .catch((err) => console.error("PDF Fail", err));
+            }, []);
+
+            useEffect(() => {
+                const saved = localStorage.getItem('prorab-data');
+                if (saved) dispatch({ type: 'LOAD_DATA', payload: JSON.parse(saved) });
+            }, []);
+
+            useEffect(() => {
+                try {
+                    localStorage.setItem('prorab-data', JSON.stringify(state));
+                } catch (e) {
+                    console.warn("Storage penuh, data mungkin tidak tersimpan");
+                }
+            }, [state]);
+
+            const handleDownload = () => {
+                if (!isPdfReady) return;
+                if (state.activeTab === 'rab') {
+                    if (calculations.totalTermPercent !== 100) { alert("Total termin harus 100%"); return; }
+                    generateRABPDF(state, calculations);
+                } else {
+                    generateInvoicePDF(state, calculations);
+                }
+            };
+
+            const selectedTermForDisplay = state.activeTab === 'invoice' 
+                ? state.paymentTerms.find(t => String(t.id) === String(state.invoice.selectedTermId)) 
+                : null;
+
+            const displayTotal = state.activeTab === 'rab' 
+                ? calculations.grandTotal 
+                : (selectedTermForDisplay ? calculations.grandTotal * (selectedTermForDisplay.percentage / 100) : 0);
+
+            return (
+                <div className="min-h-screen bg-gray-100 pb-32">
+                    <header className="bg-white border-b sticky top-0 z-10">
+                        <div className="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">P</div>
+                                <h1 className="font-bold text-xl text-gray-800 tracking-tight">ProRAB</h1>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {isInstallable && (<Button size="sm" variant="outline" onClick={installApp} className="hidden md:flex"><DownloadCloud size={14} className="mr-1" /> Install App</Button>)}
+                                <div className="text-xs text-gray-500 hidden md:block">v1.5 (Smart)</div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="bg-white border-b z-0 shadow-sm">
+                        <div className="max-w-3xl mx-auto flex">
+                            <button onClick={() => dispatch({ type: 'SET_TAB', payload: 'rab' })} className={`flex-1 py-3 text-sm font-bold text-center border-b-2 transition-colors ${state.activeTab === 'rab' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Editor RAB</button>
+                            <button onClick={() => dispatch({ type: 'SET_TAB', payload: 'invoice' })} className={`flex-1 py-3 text-sm font-bold text-center border-b-2 transition-colors ${state.activeTab === 'invoice' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Generator Invoice</button>
+                        </div>
+                    </div>
+
+                    <main className="max-w-3xl mx-auto px-0 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+                        <BusinessProfile />
+                        {state.activeTab === 'rab' ? (
+                            <>
+                                <div>
+                                    <div className="flex justify-between items-center mb-4 px-2 md:px-0">
+                                        <h3 className="text-lg font-bold text-gray-800">Rincian Pekerjaan</h3>
+                                        <Button size="sm" variant="secondary" onClick={() => dispatch({ type: 'ADD_SECTION' })}><Plus size={16} className="mr-1" /> Section Baru</Button>
+                                    </div>
+                                    {state.sections.map((section, index) => (<RabSection key={section.id} section={section} index={index} totalSections={state.sections.length} />))}
+                                    {state.sections.length === 0 && <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">Belum ada item pekerjaan.</div>}
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-800 mt-8 mb-4 px-2 md:px-0">Kalkulasi Biaya</h3>
+                                <SummaryBar calculations={calculations} />
+                                <PaymentTerms calculations={calculations} />
+                            </>
+                        ) : (
+                            <InvoiceGenerator calculations={calculations} />
+                        )}
+                    </main>
+
+                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-20">
+                        <div className="max-w-3xl mx-auto flex justify-between items-center gap-4">
+                            <div className="flex flex-col">
+                                <span className="text-xs text-gray-500 uppercase">{state.activeTab === 'rab' ? 'Total RAB' : 'Total Tagihan'}</span>
+                                <span className="font-bold text-lg text-blue-700 leading-tight">{formatCurrency(displayTotal)}</span>
+                            </div>
+                            <Button onClick={handleDownload} variant={isPdfReady ? "primary" : "secondary"} size="lg" disabled={!isPdfReady || (state.activeTab === 'invoice' && !selectedTermForDisplay)} className="shadow-blue-200 shadow-lg min-w-[160px]">
+                                {!isPdfReady ? (<><Loader2 size={18} className="mr-2 animate-spin" /> Memuat PDF...</>) : (<><Download size={18} className="mr-2" /> {state.activeTab === 'rab' ? 'Unduh RAB' : 'Unduh Invoice'}</>)}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [state, dispatch] = useReducer(appReducer, initialData);
+            return (
+                <AppContext.Provider value={{ state, dispatch }}>
+                    <AppContent />
+                </AppContext.Provider>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
