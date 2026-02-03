@@ -32,6 +32,9 @@
         /* Animasi loading */
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Mencegah scroll saat tanda tangan di mobile */
+        canvas { touch-action: none; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -42,22 +45,9 @@
         const { useState, useEffect, useReducer, useContext, createContext, useMemo, useRef } = React;
         
         // --- 2. ICON DEFINITIONS (MANUAL & STABLE) ---
-        // Mendefinisikan komponen Ikon secara langsung untuk menghindari error CDN Lucide
         
         const IconBase = ({ children, className = "", size = 24, ...props }) => (
-            <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width={size} 
-                height={size} 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className={className} 
-                {...props}
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
                 {children}
             </svg>
         );
@@ -65,18 +55,13 @@
         const Trash2 = (props) => <IconBase {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>;
         const Plus = (props) => <IconBase {...props}><path d="M5 12h14"/><path d="M12 5v14"/></IconBase>;
         const FileText = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></IconBase>;
-        const Settings = (props) => <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></IconBase>;
         const Calculator = (props) => <IconBase {...props}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></IconBase>;
-        const Save = (props) => <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></IconBase>;
         const Download = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconBase>;
         const ChevronDown = (props) => <IconBase {...props}><path d="m6 9 6 6 6-6"/></IconBase>;
         const ChevronUp = (props) => <IconBase {...props}><path d="m18 15-6-6-6 6"/></IconBase>;
         const AlertCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconBase>;
-        const Percent = (props) => <IconBase {...props}><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></IconBase>;
-        const GripVertical = (props) => <IconBase {...props}><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></IconBase>;
         const Loader2 = (props) => <IconBase {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></IconBase>;
         const DownloadCloud = (props) => <IconBase {...props}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></IconBase>;
-        const Share2 = (props) => <IconBase {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></IconBase>;
         const Upload = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></IconBase>;
         const X = (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
         const ImageIcon = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></IconBase>;
@@ -86,6 +71,7 @@
         const FileCheck = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></IconBase>;
         const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconBase>;
         const Sparkles = (props) => <IconBase {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 5H5"/><path d="M21 21v-4"/><path d="M17 19h4"/></IconBase>;
+        const PenTool = (props) => <IconBase {...props}><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></IconBase>;
 
         // --- 3. CORE LOGIC ---
 
@@ -93,31 +79,18 @@
 
         // Helper untuk mengambil history
         const getItemHistory = () => {
-            try {
-                return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-            } catch {
-                return [];
-            }
+            try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
         };
 
         // Helper untuk menyimpan/memperbarui history
         const addToHistory = (name, unit, price) => {
             if (!name || name.trim().length < 2) return; 
-            
             const history = getItemHistory();
             const cleanName = name.trim();
-            
             const newHistory = history.filter(item => item.name.toLowerCase() !== cleanName.toLowerCase());
-            
             newHistory.unshift({ name: cleanName, unit, price });
-            
             const limitedHistory = newHistory.slice(0, 200);
-            
-            try {
-                localStorage.setItem(HISTORY_KEY, JSON.stringify(limitedHistory));
-            } catch (e) {
-                console.warn("History storage full");
-            }
+            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(limitedHistory)); } catch (e) { console.warn("History storage full"); }
         };
 
         /**
@@ -135,12 +108,7 @@
             }).format(amount);
         };
 
-        const COMMON_UNITS = [
-            "ls", "m'", "m2", "m3", "kg", "ton", 
-            "bh", "unit", "set", "titik", 
-            "btg", "lbr", "zak", "roll", 
-            "jam", "hari"
-        ];
+        const COMMON_UNITS = ["ls", "m'", "m2", "m3", "kg", "ton", "bh", "unit", "set", "titik", "btg", "lbr", "zak", "roll", "jam", "hari"];
 
         // Initial State
         const initialData = {
@@ -151,6 +119,7 @@
                 phone: "0812-3456-7890",
                 email: "admin@karyamandiri.com",
                 logoUrl: "", 
+                signatureUrl: "", // New field for signature
                 footerText: "Garansi Pemeliharaan 3 Bulan",
                 clientName: "Bpk. Budi Santoso",
                 projectLocation: "Renovasi Rumah Cluster Harmoni",
@@ -312,22 +281,16 @@
                     const tableBody = section.items.map(item => [item.name, `${item.qty} ${item.unit}`, formatCurrency(item.price), formatCurrency(item.qty * item.price)]);
                     doc.autoTable({ 
                         startY: finalY, 
-                        head: [['Uraian Pekerjaan', 'Volume', 'Harga Satuan', 'Total']], // Updated Header Names
+                        head: [['Uraian Pekerjaan', 'Volume', 'Harga Satuan', 'Total']],
                         body: tableBody, 
                         theme: 'plain', 
                         styles: { fontSize: 9, cellPadding: 1.5 }, 
-                        headStyles: { 
-                            fillColor: [255, 255, 255], 
-                            textColor: [0,0,0], 
-                            fontStyle: 'bold', 
-                            lineWidth: {bottom: 0.1}
-                            // Removed global halign to allow columnStyles to control header alignment
-                        }, 
+                        headStyles: { fillColor: [255, 255, 255], textColor: [0,0,0], fontStyle: 'bold', lineWidth: {bottom: 0.1} }, 
                         columnStyles: { 
                             0: { cellWidth: 'auto', halign: 'left' }, 
-                            1: { cellWidth: 25, halign: 'center' }, // Vol: Center
-                            2: { cellWidth: 40, halign: 'right' }, // Price: Right (Widened to 40)
-                            3: { cellWidth: 40, halign: 'right' }  // Total: Right (Widened to 40)
+                            1: { cellWidth: 25, halign: 'center' }, 
+                            2: { cellWidth: 40, halign: 'right' }, 
+                            3: { cellWidth: 40, halign: 'right' }  
                         }, 
                         margin: { left: 15, right: 15 } 
                     });
@@ -335,7 +298,7 @@
                 });
 
                 if (finalY > 230) { doc.addPage(); finalY = 20; }
-                const summaryX = pageWidth - 100; // Adjusted X to prevent overlap
+                const summaryX = pageWidth - 100;
                 const valueX = pageWidth - 15;
                 doc.setFontSize(10); doc.text("Subtotal:", summaryX, finalY); doc.text(formatCurrency(calculations.subTotal), valueX, finalY, { align: "right" }); finalY += 6;
                 if (calculations.discountAmount > 0) { doc.text(`Diskon:`, summaryX, finalY); doc.text(`- ${formatCurrency(calculations.discountAmount)}`, valueX, finalY, { align: "right" }); finalY += 6; }
@@ -345,10 +308,27 @@
                 doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text("Termin Pembayaran:", 15, finalY); finalY += 5; doc.setFont("helvetica", "normal");
                 state.paymentTerms.forEach(term => { const nominal = calculations.grandTotal * (term.percentage / 100); doc.text(`• ${term.name} (${term.percentage}%): ${formatCurrency(nominal)}`, 20, finalY); finalY += 6; });
                 
-                finalY += 15; if (finalY > 250) { doc.addPage(); finalY = 30; }
-                doc.text("Disetujui Oleh (Klien),", 40, finalY, { align: "center" }); doc.text("Hormat Kami,", pageWidth - 40, finalY, { align: "center" });
-                doc.text("_______________________", 40, finalY + 25, { align: "center" }); doc.text("_______________________", pageWidth - 40, finalY + 25, { align: "center" });
-                doc.text(state.profile.clientName, 40, finalY + 30, { align: "center" }); doc.text(state.profile.companyName, pageWidth - 40, finalY + 30, { align: "center" });
+                finalY += 15; if (finalY > 240) { doc.addPage(); finalY = 30; }
+                
+                // --- SIGNATURE LOGIC ---
+                const sigY = finalY;
+                doc.text("Disetujui Oleh (Klien),", 40, sigY, { align: "center" }); 
+                doc.text("Hormat Kami,", pageWidth - 40, sigY, { align: "center" });
+
+                if (state.profile.signatureUrl) {
+                    try {
+                        const sigImgWidth = 30;
+                        const sigImgHeight = 15;
+                        const sigX = (pageWidth - 40) - (sigImgWidth / 2);
+                        doc.addImage(state.profile.signatureUrl, 'PNG', sigX, sigY + 3, sigImgWidth, sigImgHeight);
+                    } catch (e) { console.warn("Error adding signature to PDF", e); }
+                }
+
+                doc.text("_______________________", 40, sigY + 25, { align: "center" }); 
+                doc.text("_______________________", pageWidth - 40, sigY + 25, { align: "center" });
+                doc.text(state.profile.clientName, 40, sigY + 30, { align: "center" }); 
+                doc.text(state.profile.companyName, pageWidth - 40, sigY + 30, { align: "center" });
+                
                 doc.save(`RAB_${state.profile.clientName.replace(/\s+/g, '_')}.pdf`);
             } catch (err) { alert("Error PDF: " + err.message); }
         };
@@ -382,7 +362,6 @@
                 doc.autoTable({ startY: finalY, head: [['Deskripsi', 'Persentase', 'Total']], body: [[`${selectedTerm.name}\n${selectedTerm.note || ''}`, `${selectedTerm.percentage}%`, formatCurrency(invoiceAmount)]], theme: 'plain', styles: { fontSize: 10, cellPadding: 3 }, headStyles: { fillColor: [50, 50, 50], textColor: [255,255,255], fontStyle: 'bold' }, columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30, halign: 'center' }, 2: { cellWidth: 50, halign: 'right', fontStyle: 'bold' } }, margin: { left: 15, right: 15 } });
 
                 let yPos = doc.lastAutoTable.finalY + 10;
-                // Fix: Shift label further left to avoid overlap (pageWidth - 110 instead of -90)
                 doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.text("TOTAL TAGIHAN", pageWidth - 110, yPos); doc.text(formatCurrency(invoiceAmount), pageWidth - 15, yPos, { align: "right" });
                 
                 yPos += 20; const boxHeight = state.invoice.enablePenalty ? 50 : 40;
@@ -393,7 +372,19 @@
                 if (state.invoice.enablePenalty) { doc.setTextColor(220, 53, 69); doc.setFont("helvetica", "bold"); doc.text(`PERHATIAN: ${state.invoice.penaltyText}`, 20, yPos + 44); }
 
                 const sigY = yPos + boxHeight + 20; doc.setTextColor(0); doc.setFontSize(10); doc.setFont("helvetica", "normal");
-                doc.text("Hormat Kami,", pageWidth - 40, sigY, { align: "center" }); doc.text(state.profile.companyName, pageWidth - 40, sigY + 25, { align: "center" });
+                
+                doc.text("Hormat Kami,", pageWidth - 40, sigY, { align: "center" }); 
+                
+                if (state.profile.signatureUrl) {
+                    try {
+                        const sigImgWidth = 30;
+                        const sigImgHeight = 15;
+                        const sigX = (pageWidth - 40) - (sigImgWidth / 2);
+                        doc.addImage(state.profile.signatureUrl, 'PNG', sigX, sigY + 3, sigImgWidth, sigImgHeight);
+                    } catch (e) { console.warn("Error adding signature to PDF", e); }
+                }
+
+                doc.text(state.profile.companyName, pageWidth - 40, sigY + 25, { align: "center" });
                 doc.save(`Invoice_${(state.invoice.number || 'Draft').replace(/\//g, '-')}.pdf`);
             } catch (err) { alert("Error PDF Invoice: " + err.message); }
         };
@@ -425,6 +416,104 @@
                 <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
             </div>
         );
+
+        const SignatureModal = ({ isOpen, onClose, onSave }) => {
+            const canvasRef = useRef(null);
+            const [isDrawing, setIsDrawing] = useState(false);
+
+            useEffect(() => {
+                if (isOpen && canvasRef.current) {
+                    const canvas = canvasRef.current;
+                    const ctx = canvas.getContext('2d');
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = 'round';
+                    ctx.strokeStyle = '#000000';
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }, [isOpen]);
+
+            const getPos = (e) => {
+                const canvas = canvasRef.current;
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            };
+
+            const startDrawing = (e) => {
+                // Prevent scrolling on touch devices
+                if (e.cancelable) e.preventDefault();
+                
+                const pos = getPos(e);
+                const ctx = canvasRef.current.getContext('2d');
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+                setIsDrawing(true);
+            };
+
+            const draw = (e) => {
+                if (!isDrawing) return;
+                if (e.cancelable) e.preventDefault();
+                
+                const pos = getPos(e);
+                const ctx = canvasRef.current.getContext('2d');
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            };
+
+            const stopDrawing = () => {
+                setIsDrawing(false);
+            };
+
+            const clear = () => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            };
+
+            const handleSave = () => {
+                const canvas = canvasRef.current;
+                const dataUrl = canvas.toDataURL('image/png');
+                onSave(dataUrl);
+                onClose();
+            };
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-lg text-gray-800">Buat Tanda Tangan</h3>
+                            <button onClick={onClose} className="text-gray-500 hover:text-red-500"><X size={20} /></button>
+                        </div>
+                        <div className="p-4 bg-gray-100 flex flex-col items-center">
+                            <p className="text-xs text-gray-500 mb-2">Silakan tanda tangan di kotak bawah ini:</p>
+                            <canvas 
+                                ref={canvasRef}
+                                width={300}
+                                height={150}
+                                className="bg-white rounded-lg shadow-sm touch-none border-2 border-dashed border-gray-300 cursor-crosshair active:border-blue-500"
+                                onMouseDown={startDrawing}
+                                onMouseMove={draw}
+                                onMouseUp={stopDrawing}
+                                onMouseLeave={stopDrawing}
+                                onTouchStart={startDrawing}
+                                onTouchMove={draw}
+                                onTouchEnd={stopDrawing}
+                            />
+                        </div>
+                        <div className="p-4 border-t flex gap-2 justify-end bg-gray-50">
+                            <Button variant="danger" size="sm" onClick={clear}>Hapus</Button>
+                            <Button variant="primary" size="sm" onClick={handleSave}>Simpan</Button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
         const SmartDescriptionInput = ({ value, onChange, onSelect, onBlur }) => {
             const [suggestions, setSuggestions] = useState([]);
@@ -510,6 +599,7 @@
             const update = (field, val) => dispatch({ type: 'UPDATE_PROFILE', payload: { [field]: val } });
             
             const [isCompressing, setIsCompressing] = useState(false);
+            const [showSigModal, setShowSigModal] = useState(false);
 
             const compressImage = (file) => {
                 return new Promise((resolve) => {
@@ -522,33 +612,16 @@
                             const canvas = document.createElement('canvas');
                             let width = img.width;
                             let height = img.height;
-                            
-                            // Resize logic: Max 800px (aggressively safe for PDF logo)
                             const MAX_WIDTH = 800;
                             const MAX_HEIGHT = 800;
-
-                            if (width > height) {
-                                if (width > MAX_WIDTH) {
-                                    height *= MAX_WIDTH / width;
-                                    width = MAX_WIDTH;
-                                }
-                            } else {
-                                if (height > MAX_HEIGHT) {
-                                    width *= MAX_HEIGHT / height;
-                                    height = MAX_HEIGHT;
-                                }
-                            }
-
+                            if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
+                            else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
                             canvas.width = width;
                             canvas.height = height;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, width, height);
-                            
-                            // Determine output type based on input or default to jpeg for massive compression if needed.
                             let outputMime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-                            let quality = 0.7;
-
-                            resolve(canvas.toDataURL(outputMime, quality));
+                            resolve(canvas.toDataURL(outputMime, 0.7));
                         };
                     };
                 });
@@ -560,25 +633,11 @@
                     setIsCompressing(true);
                     try {
                         let finalDataUrl = "";
-                        
-                        if (file.size > 1024 * 1024) { 
-                            // Jika lebih dari 1MB, lakukan kompresi otomatis
-                            finalDataUrl = await compressImage(file);
-                        } else {
-                            // Jika kecil, baca normal
-                            finalDataUrl = await new Promise((resolve) => {
-                                const reader = new FileReader();
-                                reader.onloadend = () => resolve(reader.result);
-                                reader.readAsDataURL(file);
-                            });
-                        }
-                        
+                        if (file.size > 1024 * 1024) { finalDataUrl = await compressImage(file); } 
+                        else { finalDataUrl = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(file); }); }
                         update('logoUrl', finalDataUrl);
-                    } catch (error) {
-                        alert("Gagal memproses gambar: " + error.message);
-                    } finally {
-                        setIsCompressing(false);
-                    }
+                    } catch (error) { alert("Gagal memproses gambar: " + error.message); } 
+                    finally { setIsCompressing(false); }
                 }
                 e.target.value = null; 
             };
@@ -586,32 +645,54 @@
             return (
                 <Card className="p-3 md:p-6 mb-4 md:mb-6">
                     <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><FileText className="w-5 h-5 text-blue-600" /> Info Proyek & Kontraktor</h2>
-                    <div className="mb-6 flex items-start gap-4 p-4 border rounded-lg bg-gray-50">
-                        <div className="flex-shrink-0">
-                            {p.logoUrl ? (
-                                <div className="relative w-20 h-20 border rounded-lg overflow-hidden bg-white flex items-center justify-center">
-                                    <img src={p.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
-                                    <button onClick={() => update('logoUrl', '')} className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl-lg hover:bg-red-600"><X size={12} /></button>
-                                </div>
-                            ) : (
-                                <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400">
-                                    {isCompressing ? <Loader2 size={24} className="animate-spin text-blue-500"/> : <ImageIcon size={24} />}
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-1">
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Logo Usaha</label>
-                            {isCompressing ? (
-                                <div className="text-xs text-blue-600 font-medium animate-pulse">Sedang mengompres ukuran gambar...</div>
-                            ) : (
+                    
+                    {/* --- Logo & Signature Area --- */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div className="flex items-start gap-4 p-4 border rounded-lg bg-gray-50">
+                            <div className="flex-shrink-0">
+                                {p.logoUrl ? (
+                                    <div className="relative w-16 h-16 border rounded-lg overflow-hidden bg-white flex items-center justify-center">
+                                        <img src={p.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                        <button onClick={() => update('logoUrl', '')} className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl hover:bg-red-600"><X size={10} /></button>
+                                    </div>
+                                ) : (
+                                    <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400">
+                                        {isCompressing ? <Loader2 size={20} className="animate-spin text-blue-500"/> : <ImageIcon size={20} />}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Logo Usaha</label>
                                 <div className="relative">
                                     <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                    <Button variant="secondary" size="sm" className="pointer-events-none"><Upload size={14} className="mr-2" /> Pilih Logo</Button>
+                                    <Button variant="secondary" size="sm" className="pointer-events-none w-full justify-start"><Upload size={12} className="mr-2" /> Upload Logo</Button>
                                 </div>
-                            )}
-                            <p className="text-[10px] text-gray-400 mt-1">Otomatis diperkecil jika > 1MB</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start gap-4 p-4 border rounded-lg bg-gray-50">
+                            <div className="flex-shrink-0">
+                                {p.signatureUrl ? (
+                                    <div className="relative w-16 h-16 border rounded-lg overflow-hidden bg-white flex items-center justify-center">
+                                        <img src={p.signatureUrl} alt="Sig" className="max-w-full max-h-full object-contain" />
+                                        <button onClick={() => update('signatureUrl', '')} className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl hover:bg-red-600"><X size={10} /></button>
+                                    </div>
+                                ) : (
+                                    <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400">
+                                        <PenTool size={20} />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Tanda Tangan Digital</label>
+                                <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => setShowSigModal(true)}>
+                                    <PenTool size={12} className="mr-2" /> {p.signatureUrl ? "Ubah TTD" : "Buat TTD"}
+                                </Button>
+                                <p className="text-[10px] text-gray-400 mt-1">Muncul di RAB & Invoice</p>
+                            </div>
                         </div>
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input label="Nama Perusahaaan / Tukang" value={p.companyName} onChange={e => update('companyName', e.target.value)} />
                         <Input label="Nama Klien" value={p.clientName} onChange={e => update('clientName', e.target.value)} />
@@ -624,6 +705,12 @@
                         </div>
                         <Input label="Footer Text (Slogan)" value={p.footerText} onChange={e => update('footerText', e.target.value)} />
                     </div>
+
+                    <SignatureModal 
+                        isOpen={showSigModal} 
+                        onClose={() => setShowSigModal(false)} 
+                        onSave={(dataUrl) => update('signatureUrl', dataUrl)} 
+                    />
                 </Card>
             );
         };
@@ -991,7 +1078,7 @@
                             </div>
                             <div className="flex items-center gap-2">
                                 {isInstallable && (<Button size="sm" variant="outline" onClick={installApp} className="hidden md:flex"><DownloadCloud size={14} className="mr-1" /> Install App</Button>)}
-                                <div className="text-xs text-gray-500 hidden md:block">v1.5 (Smart)</div>
+                                <div className="text-xs text-gray-500 hidden md:block">v1.6 (Sign)</div>
                             </div>
                         </div>
                     </header>
