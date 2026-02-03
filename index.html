@@ -36,6 +36,76 @@
         /* Mencegah scroll saat tanda tangan di mobile */
         canvas { touch-action: none; }
     </style>
+
+    <!-- PWA ICON GENERATOR SCRIPT -->
+    <script>
+        (function() {
+            // Fungsi ini dijalankan segera saat halaman dimuat
+            // Tujuannya membuat icon 'P' biru secara otomatis untuk Home Screen HP
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+
+                // 1. Gambar Kotak Biru (Sesuai Logo)
+                ctx.fillStyle = '#2563EB'; // Warna blue-600 Tailwind
+                ctx.beginPath();
+                // Membuat rounded rect manual agar kompatibel
+                const x = 0, y = 0, w = 512, h = 512, r = 100;
+                ctx.moveTo(x+r, y);
+                ctx.arcTo(x+w, y, x+w, y+h, r);
+                ctx.arcTo(x+w, y+h, x, y+h, r);
+                ctx.arcTo(x, y+h, x, y, r);
+                ctx.arcTo(x, y, x+w, y, r);
+                ctx.closePath();
+                ctx.fill();
+
+                // 2. Gambar Huruf 'P' Putih
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 280px sans-serif'; // Ukuran font besar
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('P', 256, 275); // Posisi tengah
+
+                const iconUrl = canvas.toDataURL('image/png');
+
+                // 3. Pasang sebagai Favicon & Apple Touch Icon
+                const linkIcon = document.createElement('link');
+                linkIcon.rel = 'icon';
+                linkIcon.href = iconUrl;
+                document.head.appendChild(linkIcon);
+
+                const linkApple = document.createElement('link');
+                linkApple.rel = 'apple-touch-icon';
+                linkApple.href = iconUrl;
+                document.head.appendChild(linkApple);
+
+                // 4. Buat Manifest.json dinamis agar tombol Install jalan
+                const manifest = {
+                    "name": "ProRAB",
+                    "short_name": "ProRAB",
+                    "start_url": ".",
+                    "display": "standalone",
+                    "background_color": "#f3f4f6",
+                    "theme_color": "#2563eb",
+                    "icons": [{
+                        "src": iconUrl,
+                        "sizes": "512x512",
+                        "type": "image/png"
+                    }]
+                };
+
+                const linkManifest = document.createElement('link');
+                linkManifest.rel = 'manifest';
+                linkManifest.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+                document.head.appendChild(linkManifest);
+
+            } catch (e) {
+                console.warn("Gagal membuat icon PWA otomatis", e);
+            }
+        })();
+    </script>
 </head>
 <body class="bg-gray-100 text-gray-800">
     <div id="root"></div>
